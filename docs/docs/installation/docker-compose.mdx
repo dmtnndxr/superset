@@ -190,6 +190,27 @@ used by `docker compose`, and that `docker/.env-local` can be used to override t
 Also note that `docker/.env-local` is referenced in our `.gitignore`,
 preventing developers from risking committing potentially sensitive configuration to the repository.
 
+#### Enabling Translations for Non-English Languages
+
+:::tip
+By default, translations are **not** compiled during Docker builds to reduce build time and image size.
+If you need to use Superset in a language other than English, you must enable translation compilation.
+:::
+
+To enable translations, set the `BUILD_TRANSLATIONS` environment variable to `true` before building:
+
+```bash
+# Option 1: Set environment variable directly
+BUILD_TRANSLATIONS=true docker compose build
+
+# Option 2: Add to docker/.env-local file
+echo "BUILD_TRANSLATIONS=true" >> docker/.env-local
+docker compose build
+```
+
+This will compile both backend (`.mo`) and frontend (`.json`) translation files during the build process.
+For more information about translations, see the [Translations Guide](/docs/contributing/translations).
+
 One important variable is `SUPERSET_LOAD_EXAMPLES` which determines whether the `superset_init`
 container will populate example data and visualizations into the metadata database. These examples
 are helpful for learning and testing out Superset but unnecessary for experienced users and

@@ -43,6 +43,8 @@ x-common-build: &common-build
     DEV_MODE: "true"
     INCLUDE_CHROMIUM: ${INCLUDE_CHROMIUM:-false}
     INCLUDE_FIREFOX: ${INCLUDE_FIREFOX:-false}
+    # Set to "true" to compile translation files (.mo and .json) during build.
+    # Required for non-English UI languages. See docs/docs/contributing/translations.mdx
     BUILD_TRANSLATIONS: ${BUILD_TRANSLATIONS:-false}
     LOAD_EXAMPLES_DUCKDB: ${LOAD_EXAMPLES_DUCKDB:-true}
 

@@ -24,6 +24,11 @@ ARG PY_VER=3.11.13-slim-trixie
 ARG BUILDPLATFORM=${BUILDPLATFORM:-amd64}
 
 # Include translations in the final build
+# Set to "true" to compile translation files (.mo and .json) during build.
+# This is required for non-English UI languages to work properly.
+# Default is "false" to reduce build time and image size.
+# For production images with translations, set: --build-arg BUILD_TRANSLATIONS=true
+# See docs/docs/contributing/translations.mdx for more information.
 ARG BUILD_TRANSLATIONS="false"
 
 # Build arg to pre-populate examples DuckDB file

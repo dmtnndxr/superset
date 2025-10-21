@@ -1,0 +1,258 @@
+---
+title: Internationalization and Translations
+hide_title: true
+sidebar_position: 7
+version: 1
+---
+
+## Internationalization (i18n) and Translations in Apache Superset
+
+Apache Superset supports multiple languages through its internationalization system. This guide explains how translations work, where they are located, and how to update them.
+
+### Understanding Translation Files
+
+Superset uses two types of translation files:
+
+1. **`.po` files (Portable Object)** - Human-readable translation source files located in `superset/translations/[language]/LC_MESSAGES/messages.po`
+2. **`.mo` files (Machine Object)** - Compiled binary translation files used by the backend (Flask/Python)
+3. **`.json` files** - JSON translation files used by the frontend (React/JavaScript)
+
+### Translation File Locations
+
+All translation files are located in the `superset/translations/` directory:
+
+```
+superset/translations/
+├── ru/                    # Russian translations
+│   └── LC_MESSAGES/
+│       ├── messages.po    # Source translation file (committed to git)
+│       ├── messages.mo    # Compiled backend file (generated, gitignored)
+│       └── messages.json  # Frontend translation file (generated, gitignored)
+├── fr/                    # French translations
+├── es/                    # Spanish translations
+└── ...                    # Other languages
+```
+
+### Why Docker Translations May Be Incomplete
+
+**Root Cause**: By default, Docker builds do **NOT** compile translation files.
+
+The `BUILD_TRANSLATIONS` build argument defaults to `false` in Docker builds to reduce build time and image size. This means:
+
+- **Docker Compose** (local development): Translations are not built by default
+- **Docker Hub images**: Official images may not include compiled translations unless built with `BUILD_TRANSLATIONS=true`
+- **PyPI installation**: The release process explicitly compiles translations, so they are always included
+
+### How to Enable Translations in Docker
+
+#### Option 1: Enable During Build (Recommended for Production)
+
+Set the `BUILD_TRANSLATIONS` environment variable to `true` when building:
+
+```bash
+# Using docker-compose
+BUILD_TRANSLATIONS=true docker-compose build
+
+# Or create a .env file in the docker/ directory
+echo "BUILD_TRANSLATIONS=true" >> docker/.env
+docker-compose build
+
+# Using docker build directly
+docker build --build-arg BUILD_TRANSLATIONS=true -t superset .
+```
+
+#### Option 2: Compile Translations in a Running Container
+
+If you already have a running container without translations:
+
+```bash
+# For backend translations (.mo files)
+docker-compose exec superset flask fab babel-compile --target superset/translations
+
+# For frontend translations (.json files)
+# First enter the superset-node container if using docker-compose
+docker-compose exec superset-node sh
+cd /app/superset-frontend
+npm run build-translation
+```
+
+### Updating and Modifying Translations
+
+#### 1. Edit Translation Files
+
+Translation files are located at `superset/translations/[language]/LC_MESSAGES/messages.po`.
+
+For Russian translations, edit:
+```bash
+superset/translations/ru/LC_MESSAGES/messages.po
+```
+
+The `.po` file format:
+```po
+#: superset/views/core.py:123
+msgid "Dashboard"
+msgstr "Дашборд"
+
+#: superset/views/core.py:456
+msgid "Charts"
+msgstr "Графики"
+```
+
+#### 2. Extract New Translatable Strings
+
+After adding new translatable strings in code, extract them:
+
+```bash
+# Run the babel update script
+./scripts/translations/babel_update.sh
+```
+
+This will:
+- Extract all translatable strings from Python and JavaScript code
+- Update the `messages.pot` template file
+- Update all language `.po` files with new strings
+
+#### 3. Compile Translations
+
+After editing `.po` files, compile them:
+
+```bash
+# Backend translations (.mo files)
+./scripts/translations/generate_mo_files.sh
+# or directly:
+flask fab babel-compile --target superset/translations
+
+# Frontend translations (.json files)
+cd superset-frontend
+npm run build-translation
+# or directly:
+./superset-frontend/scripts/po2json.sh
+```
+
+### Translation Workflow for Contributors
+
+1. **Find the translation file** for your language in `superset/translations/[language]/LC_MESSAGES/messages.po`
+
+2. **Edit untranslated or incorrect entries**:
+   - Look for `msgid` (English source) and update the corresponding `msgstr` (translation)
+   - Empty `msgstr ""` means the string is not translated
+
+3. **Test your changes locally**:
+   ```bash
+   # Compile backend translations
+   flask fab babel-compile --target superset/translations
+   
+   # Compile frontend translations
+   cd superset-frontend
+   npm run build-translation
+   
+   # Restart Superset to see changes
+   ```
+
+4. **Submit your changes**:
+   - Only commit `.po` files to git
+   - `.mo` and `.json` files are automatically generated and should not be committed (they are in `.gitignore`)
+
+### For Release Managers
+
+When building release packages or Docker images for production:
+
+1. **PyPI packages** (automatically handled by release scripts):
+   - The `RELEASING/Dockerfile.from_local_tarball` runs `flask fab babel-compile`
+   - All `.mo` files are included in the wheel/sdist
+
+2. **Docker images for production**:
+   ```bash
+   # Build with translations enabled
+   docker build --build-arg BUILD_TRANSLATIONS=true -t apache/superset:latest .
+   ```
+
+3. **Verify translations are included**:
+   ```bash
+   # Check for .mo files
+   docker run --rm apache/superset:latest ls -la superset/translations/ru/LC_MESSAGES/
+   
+   # Should show messages.mo file
+   ```
+
+### Technical Details
+
+#### Backend Translation System (Flask-Babel)
+
+- Uses `gettext` and Babel for internationalization
+- Translation functions: `_()`, `__()`, `lazy_gettext()`
+- Configuration: `superset/translations/babel.cfg`
+- Compiled files required: `.mo` files
+
+#### Frontend Translation System (react-intl)
+
+- Uses `@superset-ui/core` and `react-intl`
+- Translation functions: `t()`, `tn()`
+- Format: JSON (JED 1.x format)
+- Compiled files required: `.json` files
+
+#### Build Process
+
+The Dockerfile (lines 96-100) shows the translation build process:
+
+```dockerfile
+# Build translations if enabled, then cleanup localization files
+RUN if [ "${BUILD_TRANSLATIONS}" = "true" ]; then \
+        npm run build-translation; \
+    fi; \
+    rm -rf /app/superset/translations/*/*/*.[po,mo];
+```
+
+And for Python (lines 139-142):
+
+```dockerfile
+RUN if [ "${BUILD_TRANSLATIONS}" = "true" ]; then \
+        pybabel compile -d /app/translations_mo | true; \
+    fi; \
+    rm -f /app/translations_mo/*/*/*.[po,json]
+```
+
+### Troubleshooting
+
+#### Translations not working after setting BUILD_TRANSLATIONS=true
+
+1. Rebuild the image completely:
+   ```bash
+   docker-compose build --no-cache
+   ```
+
+2. Verify translations are compiled:
+   ```bash
+   docker-compose exec superset ls -la superset/translations/ru/LC_MESSAGES/
+   ```
+   You should see `messages.mo` file.
+
+#### Some strings are translated, others are not
+
+This is often because:
+- Frontend translations (`.json`) are missing - run `npm run build-translation`
+- Backend translations (`.mo`) are missing - run `flask fab babel-compile`
+- The translation is not in the `.po` file - you need to add it
+
+#### Getting "translation not found" warnings
+
+1. Check if the translation exists in `messages.po`
+2. Verify the `.mo` or `.json` file is compiled
+3. Restart Superset to reload translations
+
+### Additional Resources
+
+- **Babel Documentation**: https://babel.pocoo.org/
+- **Flask-Babel**: https://python-babel.github.io/flask-babel/
+- **GNU gettext**: https://www.gnu.org/software/gettext/
+- **React Intl**: https://formatjs.io/docs/react-intl/
+
+### Quick Reference
+
+| Task | Command |
+|------|---------|
+| Enable Docker translations | `BUILD_TRANSLATIONS=true docker-compose build` |
+| Compile backend translations | `flask fab babel-compile --target superset/translations` |
+| Compile frontend translations | `cd superset-frontend && npm run build-translation` |
+| Extract new strings | `./scripts/translations/babel_update.sh` |
+| Edit Russian translations | Edit `superset/translations/ru/LC_MESSAGES/messages.po` |
