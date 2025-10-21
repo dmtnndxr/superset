@@ -214,6 +214,16 @@ RUN if [ "${BUILD_TRANSLATIONS}" = "true" ]; then \
 
 ### Troubleshooting
 
+#### Quick Verification
+
+To quickly check if translations are properly compiled, run:
+
+```bash
+./scripts/translations/verify_translations.sh
+```
+
+This will tell you which translation files are present and which are missing.
+
 #### Translations not working after setting BUILD_TRANSLATIONS=true
 
 1. Rebuild the image completely:

@@ -66,6 +66,20 @@ npm run build-translation
 ./superset-frontend/scripts/po2json.sh
 ```
 
+### Verifying Translations
+
+To check if translations are properly compiled, use the verification script:
+
+```bash
+./scripts/translations/verify_translations.sh
+```
+
+This script will:
+- Check for compiled `.mo` (backend) files
+- Check for compiled `.json` (frontend) files
+- List all available language translations
+- Provide instructions if translations are missing
+
 ### Extracting New Strings
 
 When code changes introduce new translatable strings:
