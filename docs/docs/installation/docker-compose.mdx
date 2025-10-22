@@ -193,11 +193,10 @@ preventing developers from risking committing potentially sensitive configuratio
 #### Enabling Translations for Non-English Languages
 
 :::tip
-By default, translations are **not** compiled during Docker builds to reduce build time and image size.
-If you need to use Superset in a language other than English, you must enable translation compilation.
+**Update (2025)**: Production Docker images now include compiled translations by default. This section applies primarily to **development builds** using `docker-compose`.
 :::
 
-To enable translations, set the `BUILD_TRANSLATIONS` environment variable to `true` before building:
+For development builds, translations are **not** compiled by default to reduce build time. If you need to use Superset in a language other than English during development, enable translation compilation:
 
 ```bash
 # Option 1: Set environment variable directly
@@ -209,6 +208,14 @@ docker compose build
 ```
 
 This will compile both backend (`.mo`) and frontend (`.json`) translation files during the build process.
+
+**For production deployments**, simply build the Docker image normally - translations are included by default:
+
+```bash
+# Production build (translations included by default)
+docker build -t apache/superset:latest .
+```
+
 For more information about translations, see the [Translations Guide](/docs/contributing/translations).
 
 One important variable is `SUPERSET_LOAD_EXAMPLES` which determines whether the `superset_init`

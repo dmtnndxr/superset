@@ -26,10 +26,10 @@ ARG BUILDPLATFORM=${BUILDPLATFORM:-amd64}
 # Include translations in the final build
 # Set to "true" to compile translation files (.mo and .json) during build.
 # This is required for non-English UI languages to work properly.
-# Default is "false" to reduce build time and image size.
-# For production images with translations, set: --build-arg BUILD_TRANSLATIONS=true
+# Default is "true" for production builds to ensure full language support.
+# For development, set to "false" to reduce build time.
 # See docs/docs/contributing/translations.mdx for more information.
-ARG BUILD_TRANSLATIONS="false"
+ARG BUILD_TRANSLATIONS="true"
 
 # Build arg to pre-populate examples DuckDB file
 ARG LOAD_EXAMPLES_DUCKDB="false"

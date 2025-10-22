@@ -35,30 +35,51 @@ superset/translations/
 
 ### Why Docker Translations May Be Incomplete
 
-**Root Cause**: By default, Docker builds do **NOT** compile translation files.
+**Update (2025)**: As of the latest version, Docker production builds (`lean` target) now compile translations **by default** (`BUILD_TRANSLATIONS=true`). Development builds still default to `false` for faster build times.
 
-The `BUILD_TRANSLATIONS` build argument defaults to `false` in Docker builds to reduce build time and image size. This means:
+**Historical Context**: Previously, the `BUILD_TRANSLATIONS` build argument defaulted to `false` in all Docker builds to reduce build time and image size. This caused translation issues in:
 
-- **Docker Compose** (local development): Translations are not built by default
-- **Docker Hub images**: Official images may not include compiled translations unless built with `BUILD_TRANSLATIONS=true`
-- **PyPI installation**: The release process explicitly compiles translations, so they are always included
+- **Docker Compose** (local development): Translations were not built by default
+- **Docker Hub images**: Official images did not include compiled translations unless built with `BUILD_TRANSLATIONS=true`
+
+**PyPI installation**: The release process has always explicitly compiled translations, so they are always included in wheel/sdist packages.
+
+**Current behavior**:
+- **Production images** (`docker build` without `DEV_MODE`): Translations are enabled by default
+- **Development images** (`docker-compose up`): Translations are disabled by default for faster builds
+- **PyPI packages**: Translations are always included
 
 ### How to Enable Translations in Docker
 
-#### Option 1: Enable During Build (Recommended for Production)
+#### Production Builds (Default Enabled)
 
-Set the `BUILD_TRANSLATIONS` environment variable to `true` when building:
+As of the latest version, production Docker builds include translations by default. Simply build the image normally:
+
+```bash
+# Production build with translations (default)
+docker build -t superset .
+
+# Or specify the lean target explicitly
+docker build --target lean -t superset .
+```
+
+To disable translations in production builds (not recommended):
+
+```bash
+docker build --build-arg BUILD_TRANSLATIONS=false -t superset .
+```
+
+#### Development Builds (Docker Compose)
+
+For development builds using `docker-compose`, translations are disabled by default to speed up builds. To enable them:
 
 ```bash
 # Using docker-compose
 BUILD_TRANSLATIONS=true docker-compose build
 
 # Or create a .env file in the docker/ directory
-echo "BUILD_TRANSLATIONS=true" >> docker/.env
+echo "BUILD_TRANSLATIONS=true" >> docker/.env-local
 docker-compose build
-
-# Using docker build directly
-docker build --build-arg BUILD_TRANSLATIONS=true -t superset .
 ```
 
 #### Option 2: Compile Translations in a Running Container
@@ -163,8 +184,11 @@ When building release packages or Docker images for production:
 
 2. **Docker images for production**:
    ```bash
-   # Build with translations enabled
-   docker build --build-arg BUILD_TRANSLATIONS=true -t apache/superset:latest .
+   # Translations are now enabled by default in production builds
+   docker build -t apache/superset:latest .
+   
+   # To explicitly disable (not recommended):
+   # docker build --build-arg BUILD_TRANSLATIONS=false -t apache/superset:latest .
    ```
 
 3. **Verify translations are included**:

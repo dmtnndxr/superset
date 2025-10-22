@@ -97,9 +97,18 @@ This will:
 
 ## Docker Builds
 
-**Important**: By default, Docker builds do NOT compile translation files to reduce build time.
+**Update (2025)**: Production Docker images now compile translations **by default**.
 
-To enable translations in Docker builds:
+- **Production builds** (`docker build`): `BUILD_TRANSLATIONS=true` (default)
+- **Development builds** (`docker-compose`): `BUILD_TRANSLATIONS=false` (default, for faster builds)
+
+To disable translations in production builds:
+
+```bash
+docker build --build-arg BUILD_TRANSLATIONS=false -t superset .
+```
+
+To enable translations in development builds:
 
 ```bash
 # Set BUILD_TRANSLATIONS=true when building
@@ -109,7 +118,7 @@ BUILD_TRANSLATIONS=true docker-compose build
 docker build --build-arg BUILD_TRANSLATIONS=true -t superset .
 ```
 
-Without this, non-English languages will appear incomplete in the UI.
+**Historical note**: Previously, translations were disabled by default in all Docker builds. This caused non-English languages to appear incomplete in the UI. As of 2025, production images include translations by default for a better out-of-the-box experience.
 
 ## Configuration Files
 
